@@ -59,13 +59,62 @@ const montrer = (id) => {
   ["screen-start", "screen-game", "screen-end"].forEach((s) => $(s).classList.toggle("hidden", s !== id));
 };
 
+/* ===================== QUESTIONS DÉJÀ VUES ===================== */
+// Les questions déjà posées sont mémorisées (même après fermeture de la page)
+// et ne reviennent qu'une fois toute la banque parcourue.
+const CLE_STOCKAGE = "qcm-psycho-questions-vues";
+
+function lireVues() {
+  try {
+    const brut = JSON.parse(localStorage.getItem(CLE_STOCKAGE) || "[]");
+    return new Set(brut.filter((t) => QUESTIONS.some((q) => q.q === t)));
+  } catch (e) {
+    return new Set(); // stockage indisponible : on garde juste la mémoire de la session
+  }
+}
+function ecrireVues() {
+  try { localStorage.setItem(CLE_STOCKAGE, JSON.stringify([...vues])); } catch (e) { /* ignoré */ }
+}
+let vues = lireVues();
+
+function majInfoVues() {
+  document.querySelectorAll(".seen-box").forEach((box) => {
+    box.innerHTML = "";
+    const txt = document.createElement("span");
+    txt.textContent = `📚 Questions déjà découvertes : ${vues.size} / ${QUESTIONS.length}`;
+    box.appendChild(txt);
+    if (vues.size > 0) {
+      const b = document.createElement("button");
+      b.className = "link-btn";
+      b.textContent = "Tout réinitialiser";
+      b.addEventListener("click", () => {
+        vues = new Set();
+        ecrireVues();
+        majInfoVues();
+      });
+      box.appendChild(b);
+    }
+  });
+}
+
 /* ===================== ÉTAT ===================== */
 let partie = null;
 
 function nouvellePartie() {
   const nb = Math.min(NB_QUESTIONS, QUESTIONS.length);
+  let nonVues = QUESTIONS.filter((q) => !vues.has(q.q));
+  let choisies;
+  if (nonVues.length >= nb) {
+    choisies = melanger(nonVues).slice(0, nb);
+  } else {
+    // Fin du tour : on pose d'abord les dernières inédites, puis un nouveau tour commence
+    const restantes = melanger(QUESTIONS.filter((q) => vues.has(q.q)));
+    choisies = melanger([...nonVues, ...restantes.slice(0, nb - nonVues.length)]);
+    vues = new Set();
+    toast("🔄 Tu as fait le tour de toutes les questions ! Un nouveau tour commence.");
+  }
   partie = {
-    questions: melanger(QUESTIONS).slice(0, nb),
+    questions: choisies,
     index: 0,
     score: 0,
     serie: 0,
@@ -113,6 +162,8 @@ function toast(html) {
 function afficherQuestion() {
   const q = partie.questions[partie.index];
   partie.repondu = false;
+  vues.add(q.q);
+  ecrireVues();
 
   $("q-num").textContent = partie.index + 1;
   $("q-total").textContent = partie.questions.length;
@@ -225,6 +276,7 @@ function finDePartie() {
   }
 
   $("progress-bar").style.width = "100%";
+  majInfoVues();
   montrer("screen-end");
 }
 
@@ -245,6 +297,8 @@ MEDAILLES.forEach((m) => {
   c.textContent = `${m.icone} ${m.nom} · ${m.seuil} pts`;
   $("medal-legend").appendChild(c);
 });
+
+majInfoVues();
 
 $("btn-start").addEventListener("click", demarrer);
 $("btn-restart").addEventListener("click", demarrer);

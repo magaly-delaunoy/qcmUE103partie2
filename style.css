@@ -170,3 +170,8 @@ h2 { font-size: 1.2rem; margin: 18px 0 14px; line-height: 1.4; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* Compteur de questions vues */
+.seen-box { text-align: center; color: var(--muted); font-size: .9rem; margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: center; align-items: center; }
+.link-btn { background: none; border: 0; color: var(--primary); text-decoration: underline; cursor: pointer; font-size: .9rem; padding: 2px; }
+.link-btn:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
